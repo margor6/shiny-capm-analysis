@@ -62,6 +62,7 @@ To run this application locally:
 * `server.R` - Backend logic and computations.
 * `presentation.html` - **Detailed financial analysis and case study results.**
 * `presentation.Rmd` - Source code for the presentation.
+* `mstyle.css` - CSS styling for the presentation.
 
 ---
 **Author:** Marcin Górski
