@@ -1,0 +1,282 @@
+---
+title: "Nieliniowa Analiza Modelu CAPM"
+author: "Marcin Górski"
+date: "11-11-2025"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    css: mstyle.css
+---
+
+## Wprowadzenie i Cel Projektu
+
+### Cel analizy
+
+Głównym celem projektu jest **porównanie dwóch modeli ekonometrycznych** opisujących zwroty z akcji wybranej przez użytkownika spółki, np. Apple (AAPL) w oparciu o zwroty z wybranego rynku, np. (S&P 500):
+
+1.  **Model A**: Klasyczny, liniowy model **CAPM**.
+2.  **Model B**: Nieliniowy (kwadratowy) model **Testu Treynora-Mazuy**.
+
+Dalszą część tej prezentacji oprzemy właśnie na tych dwóch zestawach danych.
+
+### Pytanie badawcze
+
+> Czy klasyczny model CAPM jest wystarczający? Czy znajdujemy statystyczne dowody na istnienie nieliniowości (tzw. "market timing"), co sugerowałoby, że działania spółki zależą od ich przewidywań na temat rynku?
+
+## O Danych 📊
+
+### Źródło i Zmienne
+
+* **Dane**: Dzienne ceny zamknięcia (skorygowane) dla spółki **Apple Inc. (AAPL)** oraz indeksu **S&P 500 (^GSPC)**.
+* **Źródło**: Pobrano z **Yahoo Finance** przy użyciu pakietu `quantmod`.
+* **Okres**: `r "2020-01-01"` do `r Sys.Date()`.
+* **Zmienne Modelowe**:
+    * $y$: Dzienna stopa zwrotu z akcji Apple.
+    * $x$: Dzienna stopa zwrotu z indeksu S&P 500.
+
+---
+
+### Przygotowanie danych (fragment kodu)
+
+```{r, echo=TRUE, eval=FALSE}
+#Pobieramy dane
+dane_spolki <- getSymbols("AAPL", src = "yahoo", 
+                          auto.assign = F)
+dane_rynku <- getSymbols("^GSPC", src = "yahoo", 
+                         auto.assign = F)
+
+#Obliczamy stopy zwrotu
+zwrot_spolki <- dailyReturn(Ad(dane_spolki))
+zwrot_rynku <- dailyReturn(Ad(dane_rynku))
+
+#Tworzymy ramke danych
+dane <- merge(zwrot_spolki, zwrot_rynku)
+colnames(dane) <- c("y", "x")
+# ... itd.
+```
+
+## O Metodzie 📈
+
+### Model A: Klasyczny Liniowy CAPM
+
+Model ten zakłada stałą, liniową zależność między zwrotem ze spółki a rynkiem.
+
+$$
+R_{i} - R_{f} = \alpha + \beta (R_{m} - R_{f}) + \epsilon
+$$
+*Po uproszczeniu (pomijając $R_f$ dla danych dziennych):*
+$$
+y = \alpha + \beta x + \epsilon
+$$
+* **$R_{i}$ (lub $y$):** Zwrot z inwestycji (zmienna objaśniana).
+* **$R_{m}$ (lub $x$):** Zwrot z rynku (zmienna objaśniająca).
+* **$R_{f}$:** Stopa wolna od ryzyka (pomijana w uproszczeniu).
+* **$\alpha$ (Alfa):** Wyraz wolny, ponadprzeciętny zwrot, niewyjaśnionego przez rynek.
+* **$\beta$ (Beta):** Miara **ryzyka systematycznego** (wrażliwość na rynek).
+* **$\epsilon$ (Epsilon):** Składnik losowy, szum.
+
+---
+
+### Model B: Test Treynora-Mazuy (Kwadratowy)
+
+Model ten testuje hipotezę "market timing" poprzez dodanie członu kwadratowego.
+
+$$
+y = \alpha + \beta x + \gamma x^2 + \epsilon
+$$
+
+* $\gamma$ (**Nieliniowość**): To dodatkowy, kluczowy parametr.
+    * Jeśli $\gamma > 0$ i jest istotne, sugeruje to **wypukłość (∪)**. Spółka reaguje mocniej na ekstremalne ruchy rynku.
+    * Jeśli $\gamma < 0$ i jest istotne, sugeruje to **wklęsłość (∩)**. Spółka stabilizuje się podczas ekstremalnych ruchów.
+
+### Metoda Wyboru Modelu: AIC
+
+> Jak wybrać między modelem prostym a złożonym?
+
+Używamy **Kryterium Informacyjnego Akaike (AIC)**.
+* AIC nagradza za dobre dopasowanie do danych, ale **karze za złożoność** (liczbę parametrów).
+* **Zasada: Wybieramy model z NIŻSZĄ wartością AIC.**
+
+## Wyniki Analizy 🔍
+
+### Estymacja Modeli (Kod R)
+
+```{r, echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+library(quantmod)
+library(ggplot2)
+
+#Pobieranie danych
+dane_spolki <- getSymbols("AAPL", src = "yahoo", from = "2020-01-01", auto.assign = FALSE)
+dane_rynku <- getSymbols("^GSPC", src = "yahoo", from = "2020-01-01", auto.assign = FALSE)
+
+#Przygotowanie danych
+zwrot_spolki <- dailyReturn(Ad(dane_spolki))
+zwrot_rynku <- dailyReturn(Ad(dane_rynku))
+dane <- merge(zwrot_spolki, zwrot_rynku)
+colnames(dane) <- c("y", "x")
+dane <- na.omit(dane)
+dane$x_kwadrat <- dane$x^2
+dane_df <- as.data.frame(dane)
+
+#Estymacja Modeli
+model_A <- lm(y ~ x, data = dane_df)
+model_B <- lm(y ~ x + x_kwadrat, data = dane_df)
+```
+
+---
+
+### Wyniki: Porównanie Modeli (AIC)
+
+Porównujemy oba modele przy użyciu funkcji `AIC()` i formatujemy wynik za pomocą `knitr::kable()`.
+
+```{r, echo=TRUE, eval=TRUE}
+#Tworzymy tabelę porównawczą AIC
+tabela_aic <- AIC(model_A, model_B)
+rownames(tabela_aic) <- c("Model A (Liniowy)", "Model B (Kwadratowy)")
+
+#Używamy kable do ladnego wyswietlania
+knitr::kable(tabela_aic, 
+             caption = "Porównanie wartości AIC dla obu modeli", 
+             digits = 2)
+```
+
+**Wniosek:** Model B (Kwadratowy) posiada **niższą wartość AIC**, co sugeruje, że oferuje on lepszy kompromis między dopasowaniem a złożonością.
+
+## Wyniki: Wizualizacja Porównawcza
+
+<div class="columns-2">
+
+<div>
+
+```{r, echo=FALSE, eval=TRUE, fig.align='center', warning=FALSE, message=FALSE, out.width="95%"}
+#Dodajemy przewidywania z obu modeli
+dane_df$pred_A <- predict(model_A)
+dane_df$pred_B <- predict(model_B)
+
+#Rysujemy wykres 
+ggplot(dane_df, aes(x = x, y = y)) +
+  geom_point(alpha = 0.1, color = "grey50") + 
+  geom_line(aes(y = pred_A, color = "Model A (Liniowy)"), size = 1) +
+  geom_line(aes(y = pred_B, color = "Model B (Kwadratowy)"), size = 1, linetype = "dashed") +
+  scale_color_manual(name = "Modele", values = c("blue", "red")) +
+  labs(title = "Porównanie dopasowania modeli CAPM",
+       x = "Dzienna stopa zwrotu rynku (S&P 500)",
+       y = "Dzienna stopa zwrotu spółki (Apple)") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+```
+
+</div>
+<div>
+
+Nałożenie obu linii regresji na chmurę punktów pozwala wizualnie ocenić różnicę.
+
+<br>
+
+**Wniosek:** Czerwona, przerywana linia (Model B) wykazuje lekką **wypukłość (∪)**, lepiej dopasowując się do danych w skrajnych punktach (podczas krachów i euforii). Różnica z pewnością nie jest tu wielka, co zgadza się z obliczonymi wartościami AIC.
+
+</div>
+</div>
+
+## Wyniki: Interpretacja Parametrów (Model B)
+
+Skupiamy się na wybranym przez AIC Modelu B. Sprawdzamy statystyczną istotność obliczonych parametrów, korzystając z testu t-Studenta.
+```{r, echo=F, warning=F, eval=T}
+library(knitr)
+#Wyswietlamy podsumowanie wybranego modelu
+summary_B <- summary(model_B)
+
+#Drukujemy tylko tabelę wsp., bo całe summary() się nie miesci, a tak jest czytelniej
+kable(summary_B$coefficients, 
+      digits = c(5, 4, 3, 4), # Liczba miejsc po przecinku dla każdej kolumny
+      caption = "Oszacowane parametry dla Modelu B (Kwadratowego)")
+```
+
+**Interpretacja:**
+
+* **Alfa (Intercept):** `r round(summary_B$coefficients[1, 1], 5)` - Jest **statystycznie nieistotna** (p-value > 0.05), co sugeruje, że nie ma statystycznych podstaw by twierdzić, że spółka generowała stopy zwrotu inne niż wynikałoby to z rynku.
+* **Beta (x):** `r round(summary_B$coefficients[2, 1], 3)` - Bardzo istotna, spółka jest agresywna (Beta > 1).
+* **Beta 2 (x\_kwadrat):** `r round(summary_B$coefficients[3, 1], 3)` - **Jest statystycznie istotna.** (p-value < 0.05). To jest dowód na istnienie nieliniowości (market timing).
+* **Skoryg. R-kwadrat:** `r round(summary_B$adj.r.squared, 3)` (nie w tabeli) - Model wyjaśnia ok. **`r round(summary_B$adj.r.squared*100, 1)`%** zmienności spółki.
+
+---
+
+### Wyniki: Hipoteza o normalności Reszt
+
+Sprawdzamy założenie o normalności reszt dla modelu B.
+
+> $H_0$: Reszty mają rozkład normalny.
+
+```{r, echo=TRUE, eval=TRUE}
+#Test Shapiro-Wilka na resztach (limit 5000)
+reszty_B <- residuals(model_B)
+if(length(reszty_B) > 5000) {
+  shapiro.test(sample(reszty_B, 5000))
+} else {
+  shapiro.test(reszty_B)
+}
+```
+**Wniosek:** p-value jest ekstremalnie małe (< 0.05), więc **odrzucamy $H_0$**. Reszty nie są normalne.
+
+---
+
+### Wyniki: Normalność Reszt (wizualnie)
+
+Wykres Q-Q potwierdza brak normalności.
+
+```{r, echo=FALSE, eval=TRUE, fig.align='center'}
+#Wykres Q-Q
+par(mfrow = c(1,2), oma=c(0,0,2,0)) # Ustawienie dwóch wykresów
+hist(reszty_B, breaks = 100, main = "Histogram reszt", xlab="Reszty", col="grey")
+qqnorm(reszty_B, main = "Wykres Q-Q reszt")
+qqline(reszty_B, col = "red", lwd = 2)
+title("Diagnostyka reszt modelu B", outer=TRUE)
+```
+
+**Interpretacja:** Wykresy (szczególnie Q-Q) pokazują występowanie wartości odstających. Ekstremalne zdarzenia (krachy, euforie) są częstsze niż w rozkładzie normalnym. 
+
+
+## Wnioski Końcowe
+
+1.  **Model kwadratowy (Model B) okazał się lepszy** od klasycznego, liniowego modelu CAPM (na podstawie niższego AIC).
+2.  Znaleźliśmy **istotny statystycznie**, przy ${\alpha}$=0.05, parametr $\gamma$ (przy $x^2$), co jest dowodem na **nieliniową zależność** między zwrotami z Apple a rynkiem (tzw. market timing).
+3.  Oznacza to, że klasyczny model CAPM jest **niewystarczający** do pełnego opisu ryzyka spółki Apple w badanym okresie.
+4.  Diagnostyka reszt wykazała brak normalności (wartości odstające), co potwierdza, że model można by dalej rozwijać (np. o modele GARCH).
+
+
+## Inne spółki dające ciekawe wyniki:
+
+* **Advanced Micro Devices (AMD)** - model kwadratowy z ${\gamma}$ = 1.6 - spółka agresywna
+
+* **The Boeing Company (BO)** - model kwadratowy z ${\gamma}$ < 0 (wykres wklęsły) - spółka stabilna
+
+* **ETF na złoto (GLD)** - model liniowy (ale wyjaśniający jedynie 1.6% zmienności!)
+
+## Użyte Pakiety 📦
+
+### `quantmod`
+
+* **Autor:** Jeffrey A. Ryan oraz Joshua M. Ulrich.
+* **Cel:** Pakiet `quantmod` (Quantitative Financial Modelling) to zestaw narzędzi do pobierania, analizowania i wizualizowania danych finansowych.
+* **Wybrane funkcje:**
+    * `getSymbols(Ticker, src = "yahoo")`: Służy do pobierania danych historycznych z różnych źródeł (np. Yahoo Finance, FRED). W naszym projekcie pobraliśmy "AAPL" i "^GSPC".
+    * `dailyReturn(x)`: Oblicza stopy zwrotu (domyślnie arytmetyczne).
+    * `Ad(x)`: Ekstrahuje kolumnę "Adjusted" (skorygowana cena zamknięcia) z pobranego obiektu `xts`.
+
+---
+
+### `ggplot2`
+
+* **Autor:** Hadley Wickham.
+* **Cel:** Najpopularniejszy pakiet do wizualizacji danych w R. Pozwala na budowanie wykresów.
+* **Wybrane funkcje:**
+    * `ggplot(data, aes(...))`: Inicjalizuje obiekt wykresu i definiuje parametry.
+    * `geom_point()`: Dodaje warstwę punktów (wykres rozrzutu).
+    * `geom_line()`: Dodaje warstwę linii.
+    * `labs()`: Służy do definiowania wszystkich etykiet (tytuł, podtytuł, osie, legenda).
+
+
+
+
+## Dziękuję za uwagę!
