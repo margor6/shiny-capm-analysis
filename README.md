@@ -1,7 +1,7 @@
 # CAPM & Market Timing Analysis (Shiny App)
 
-![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)
-![Shiny](https://img.shields.io/badge/Shiny-007BC2?style=for-the-badge&logo=rstudio&logoColor=white)
+![R](https://img.shields.io/badge/R-4.0%2B-blue)
+![Shiny](https://img.shields.io/badge/Web_App-Shiny-blue)
 ![Status](https://img.shields.io/badge/Status-Maintained-success)
 
 ## Overview
@@ -37,6 +37,14 @@ The app compares two regression models using **AIC (Akaike Information Criterion
 * **Visualization:** ggplot2
 * **Reporting:** knitr, R Markdown
 
+## Project Structure
+
+* `ui.R` - User Interface definition.
+* `server.R` - Backend logic and computations.
+* `presentation.html` - **Detailed financial analysis and case study results.**
+* `presentation.Rmd` - Source code for the presentation.
+* `mstyle.css` - CSS styling for the presentation.
+
 ## Installation & Usage
 
 To run this application locally:
@@ -55,14 +63,6 @@ To run this application locally:
     library(shiny)
     runApp()
     ```
-
-## Project Structure
-
-* `ui.R` - User Interface definition.
-* `server.R` - Backend logic and computations.
-* `presentation.html` - **Detailed financial analysis and case study results.**
-* `presentation.Rmd` - Source code for the presentation.
-* `mstyle.css` - CSS styling for the presentation.
 
 ---
 **Author:** Marcin Górski
