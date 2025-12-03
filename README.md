@@ -29,6 +29,10 @@ The app compares two regression models using **AIC (Akaike Information Criterion
 * **Visual Analysis:** Interactive scatter plots with fitted regression curves using `ggplot2`.
 * **Diagnostics:** Residual analysis including Shapiro-Wilk test and Q-Q plots.
 
+## Screenshot
+
+<img width="1113" height="897" alt="image" src="https://github.com/user-attachments/assets/d900b53e-97bb-484e-946f-1d88a0b80c60" />
+
 ## Tech
 
 * **Core:** R
